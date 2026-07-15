@@ -23,22 +23,6 @@ jobs:
         cp SceneDelegate.swift SMSPushApp/SMSPushApp/ || true
         cp ViewController.swift SMSPushApp/SMSPushApp/ || true
         
-        # Создаем App.swift для точки входа
-        cat << 'EOF' > SMSPushApp/SMSPushApp/App.swift
-        import UIKit
-
-        @main
-        class AppDelegate: UIResponder, UIApplicationDelegate {
-            var window: UIWindow?
-
-            func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-                import UserNotifications
-                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
-                return true
-            }
-        }
-        EOF
-
         # Создаем Info.plist с правильной конфигурацией для UIKit
         cat << 'EOF' > SMSPushApp/SMSPushApp/Info.plist
         <?xml version="1.0" encoding="UTF-8"?>
@@ -103,7 +87,9 @@ jobs:
         
         # Компилируем все Swift файлы под iOS 14 arm64
         xcrun -sdk iphoneos swiftc -target arm64-apple-ios14.0 \
-          SMSPushApp/SMSPushApp/*.swift \
+          SMSPushApp/SMSPushApp/AppDelegate.swift \
+          SMSPushApp/SMSPushApp/SceneDelegate.swift \
+          SMSPushApp/SMSPushApp/ViewController.swift \
           -o build/Payload/SMSPushApp.app/SMSPushApp \
           -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
           -parse-as-library
