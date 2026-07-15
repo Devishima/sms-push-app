@@ -1,0 +1,124 @@
+name: Build SMS-Push App for TrollStore
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup iOS Project Bundle
+      run: |
+        # Создаем структуру приложения
+        mkdir -p SMSPushApp/SMSPushApp
+        
+        # Переносим основные файлы
+        cp AppDelegate.swift SMSPushApp/SMSPushApp/ || true
+        cp SceneDelegate.swift SMSPushApp/SMSPushApp/ || true
+        cp ViewController.swift SMSPushApp/SMSPushApp/ || true
+        
+        # Создаем App.swift для точки входа
+        cat << 'EOF' > SMSPushApp/SMSPushApp/App.swift
+        import UIKit
+
+        @main
+        class AppDelegate: UIResponder, UIApplicationDelegate {
+            var window: UIWindow?
+
+            func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+                import UserNotifications
+                UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+                return true
+            }
+        }
+        EOF
+
+        # Создаем Info.plist с правильной конфигурацией для UIKit
+        cat << 'EOF' > SMSPushApp/SMSPushApp/Info.plist
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>ru_RU</string>
+            <key>CFBundleExecutable</key>
+            <string>SMSPushApp</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.devishima.smspushapp</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleName</key>
+            <string>SMS Push App</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>LSRequiresIPhoneOS</key>
+            <true/>
+            <key>UIApplicationSceneManifest</key>
+            <dict>
+                <key>UISceneConfigurations</key>
+                <dict>
+                    <key>UIWindowSceneSessionRoleApplication</key>
+                    <array>
+                        <dict>
+                            <key>UISceneConfigurationName</key>
+                            <string>Default Configuration</string>
+                            <key>UISceneDelegateClassName</key>
+                            <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+                        </dict>
+                    </array>
+                </dict>
+            </dict>
+            <key>UIApplicationSupportsIndirectInputEvents</key>
+            <true/>
+            <key>UISupportedInterfaceOrientations</key>
+            <array>
+                <string>UIInterfaceOrientationPortrait</string>
+                <string>UIInterfaceOrientationLandscapeLeft</string>
+                <string>UIInterfaceOrientationLandscapeRight</string>
+            </array>
+            <key>UISupportedInterfaceOrientations~ipad</key>
+            <array>
+                <string>UIInterfaceOrientationPortrait</string>
+                <string>UIInterfaceOrientationPortraitUpsideDown</string>
+                <string>UIInterfaceOrientationLandscapeLeft</string>
+                <string>UIInterfaceOrientationLandscapeRight</string>
+            </array>
+        </dict>
+        </plist>
+        EOF
+
+    - name: Compile and Package App Bundle
+      run: |
+        mkdir -p build/Payload/SMSPushApp.app
+        
+        # Компилируем все Swift файлы под iOS 14 arm64
+        xcrun -sdk iphoneos swiftc -target arm64-apple-ios14.0 \
+          SMSPushApp/SMSPushApp/*.swift \
+          -o build/Payload/SMSPushApp.app/SMSPushApp \
+          -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
+          -parse-as-library
+          
+        # Переносим Info.plist
+        cp SMSPushApp/SMSPushApp/Info.plist build/Payload/SMSPushApp.app/
+
+    - name: Create TIPA File
+      run: |
+        cd build
+        zip -r SMSPushApp.tipa Payload
+        ls -lh SMSPushApp.tipa
+        
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SMSPushApp-TrollStore
+        path: build/SMSPushApp.tipa
