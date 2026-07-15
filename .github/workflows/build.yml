@@ -13,17 +13,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup iOS Project Bundle
+    - name: Setup iOS Project Bundle for SwiftUI
       run: |
         # Создаем структуру приложения
         mkdir -p SMSPushApp/SMSPushApp
         
-        # Переносим основные файлы
-        cp AppDelegate.swift SMSPushApp/SMSPushApp/ || true
-        cp SceneDelegate.swift SMSPushApp/SMSPushApp/ || true
-        cp ViewController.swift SMSPushApp/SMSPushApp/ || true
+        # Переносим SwiftUI файлы
+        cp App.swift SMSPushApp/SMSPushApp/ || true
+        cp ContentView.swift SMSPushApp/SMSPushApp/ || true
         
-        # Создаем Info.plist с правильной конфигурацией для UIKit
+        # Создаем Info.plist для SwiftUI приложения
         cat << 'EOF' > SMSPushApp/SMSPushApp/Info.plist
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -56,8 +55,8 @@ jobs:
                         <dict>
                             <key>UISceneConfigurationName</key>
                             <string>Default Configuration</string>
-                            <key>UISceneDelegateClassName</key>
-                            <string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+                            <key>UISceneClassName</key>
+                            <string>UIWindowScene</string>
                         </dict>
                     </array>
                 </dict>
@@ -81,15 +80,14 @@ jobs:
         </plist>
         EOF
 
-    - name: Compile and Package App Bundle
+    - name: Compile and Package App Bundle (SwiftUI)
       run: |
         mkdir -p build/Payload/SMSPushApp.app
         
-        # Компилируем все Swift файлы под iOS 14 arm64
+        # Компилируем SwiftUI файлы под iOS 14 arm64
         xcrun -sdk iphoneos swiftc -target arm64-apple-ios14.0 \
-          SMSPushApp/SMSPushApp/AppDelegate.swift \
-          SMSPushApp/SMSPushApp/SceneDelegate.swift \
-          SMSPushApp/SMSPushApp/ViewController.swift \
+          SMSPushApp/SMSPushApp/App.swift \
+          SMSPushApp/SMSPushApp/ContentView.swift \
           -o build/Payload/SMSPushApp.app/SMSPushApp \
           -sdk $(xcrun --sdk iphoneos --show-sdk-path) \
           -parse-as-library
